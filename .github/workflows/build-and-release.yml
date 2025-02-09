@@ -1,13 +1,19 @@
-name: Build and Release WebAssembly
+name: Build, Release, and Deploy
 
 on:
   push:
-    tags:
-      - 'v*'  # Trigger on version tags
+    branches: [main]  # Deploy on main branch updates
+    tags: ['v*']     # Create release on version tags
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
-  contents: write    # This is required for creating releases
+  contents: write    # Required for creating releases
+  pages: write      # Required for deploying to Pages
+  id-token: write   # Required for deploying to Pages
+
+# Environment for Pages deployment
+env:
+  GITHUB_PAGES_URL: ${{ github.event.repository.html_url }}
 
 jobs:
   build:
@@ -39,49 +45,68 @@ jobs:
         emmake make
         ls -la
     
-    - name: Debug File Locations
+    - name: Prepare Deployment Files
       run: |
-        echo "Contents of build directory:"
-        ls -R build/
-        echo "\nContents of root directory:"
-        ls -la
-    
-    - name: Prepare Release Files
-      run: |
-        mkdir -p release
+        mkdir -p dist
         # Copy build artifacts
         if [ -f "build/terminal.wasm" ]; then
-          cp build/terminal.wasm release/
+          cp build/terminal.wasm dist/
         else
           echo "terminal.wasm not found in build directory"
           exit 1
         fi
         if [ -f "build/terminal.js" ]; then
-          cp build/terminal.js release/terminal.generated.js
+          cp build/terminal.js dist/terminal.generated.js
         else
           echo "terminal.js not found in build directory"
           exit 1
         fi
         # Copy source files
-        cp terminal.js release/terminal.js
-        cp index.html release/
-        echo "\nContents of release directory:"
-        ls -la release/
+        cp terminal.js dist/
+        cp config.js dist/
+        cp index.html dist/
         
+        echo "Contents of dist directory:"
+        ls -la dist/
+    
+    # Create release if this is a tag push
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          release/terminal.wasm
-          release/terminal.generated.js
-          release/terminal.js
-          release/index.html
+          dist/terminal.wasm
+          dist/terminal.generated.js
+          dist/terminal.js
+          dist/config.js
+          dist/index.html
         body: |
           WebAssembly Terminal Release
           - terminal.wasm: WebAssembly binary
           - terminal.generated.js: Emscripten generated JavaScript
           - terminal.js: Terminal implementation
+          - config.js: WebAssembly configuration
           - index.html: Web interface
+          
+          Try it live at: ${{ env.GITHUB_PAGES_URL }}/wasm_terminal
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    # Upload the dist directory for Pages deployment
+    - name: Upload Pages artifact
+      uses: actions/upload-pages-artifact@v2
+      with:
+        path: dist
+
+  # Deploy to GitHub Pages
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
