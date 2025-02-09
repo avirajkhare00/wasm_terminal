@@ -22,12 +22,25 @@
         #terminal {
             border: none;
         }
+        #loading {
+            color: #00ff00;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
     <div id="terminal-container">
         <canvas id="terminal" width="800" height="480"></canvas>
+        <div id="loading">Loading WebAssembly Terminal...</div>
     </div>
+    <!-- Module configuration must be loaded first -->
+    <script src="config.js"></script>
+    <!-- Then load the Emscripten generated code -->
+    <script src="terminal.generated.js"></script>
+    <!-- Finally load our terminal implementation -->
     <script src="terminal.js"></script>
 </body>
 </html>
