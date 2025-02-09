@@ -1,29 +1,22 @@
-name: Build, Release, and Deploy
+name: Create Release
 
 on:
   push:
-    branches: [main]  # Deploy on main branch updates
     tags: ['v*']     # Create release on version tags
   workflow_dispatch:  # Allow manual trigger
 
 permissions:
   contents: write    # Required for creating releases
-  pages: write      # Required for deploying to Pages
-  id-token: write   # Required for deploying to Pages
-
-# Environment for Pages deployment
-env:
-  GITHUB_PAGES_URL: ${{ github.event.repository.html_url }}
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup Emscripten
-      uses: mymindstorm/setup-emsdk@v12
+      uses: mymindstorm/setup-emsdk@v14
       with:
         version: latest
         actions-cache-folder: 'emsdk-cache'
@@ -45,7 +38,7 @@ jobs:
         emmake make
         ls -la
     
-    - name: Prepare Deployment Files
+    - name: Prepare Release Files
       run: |
         mkdir -p dist
         # Copy build artifacts
@@ -69,10 +62,8 @@ jobs:
         echo "Contents of dist directory:"
         ls -la dist/
     
-    # Create release if this is a tag push
     - name: Create Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: softprops/action-gh-release@v1
+      uses: softprops/action-gh-release@v2
       with:
         files: |
           dist/terminal.wasm
@@ -88,25 +79,6 @@ jobs:
           - config.js: WebAssembly configuration
           - index.html: Web interface
           
-          Try it live at: ${{ env.GITHUB_PAGES_URL }}/wasm_terminal
+          Try it live at: ${{ github.event.repository.html_url }}/wasm_terminal
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-    
-    # Upload the dist directory for Pages deployment
-    - name: Upload Pages artifact
-      uses: actions/upload-pages-artifact@v2
-      with:
-        path: dist
-
-  # Deploy to GitHub Pages
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    
-    steps:
-    - name: Deploy to GitHub Pages
-      id: deployment
-      uses: actions/deploy-pages@v2
