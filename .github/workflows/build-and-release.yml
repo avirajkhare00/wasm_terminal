@@ -37,14 +37,36 @@ jobs:
       run: |
         cd build
         emmake make
+        ls -la
+    
+    - name: Debug File Locations
+      run: |
+        echo "Contents of build directory:"
+        ls -R build/
+        echo "\nContents of root directory:"
+        ls -la
     
     - name: Prepare Release Files
       run: |
-        mkdir release
-        cp build/terminal.wasm release/
-        cp build/terminal.js release/
+        mkdir -p release
+        # Copy build artifacts
+        if [ -f "build/terminal.wasm" ]; then
+          cp build/terminal.wasm release/
+        else
+          echo "terminal.wasm not found in build directory"
+          exit 1
+        fi
+        if [ -f "build/terminal.js" ]; then
+          cp build/terminal.js release/terminal.generated.js
+        else
+          echo "terminal.js not found in build directory"
+          exit 1
+        fi
+        # Copy source files
+        cp terminal.js release/terminal.js
         cp index.html release/
-        cp terminal.js release/
+        echo "\nContents of release directory:"
+        ls -la release/
         
     - name: Create Release
       if: startsWith(github.ref, 'refs/tags/')
@@ -52,8 +74,14 @@ jobs:
       with:
         files: |
           release/terminal.wasm
+          release/terminal.generated.js
           release/terminal.js
           release/index.html
-          release/terminal.js
+        body: |
+          WebAssembly Terminal Release
+          - terminal.wasm: WebAssembly binary
+          - terminal.generated.js: Emscripten generated JavaScript
+          - terminal.js: Terminal implementation
+          - index.html: Web interface
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
