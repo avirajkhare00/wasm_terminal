@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebAssembly Terminal</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background-color: #1e1e1e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: monospace;
+        }
+        #terminal-container {
+            background-color: #000;
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        #terminal {
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="terminal-container">
+        <canvas id="terminal" width="800" height="480"></canvas>
+    </div>
+    <script src="terminal.js"></script>
+</body>
+</html>

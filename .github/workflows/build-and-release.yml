@@ -1,0 +1,56 @@
+name: Build and Release WebAssembly
+
+on:
+  push:
+    tags:
+      - 'v*'  # Trigger on version tags
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Setup Emscripten
+      uses: mymindstorm/setup-emsdk@v12
+      with:
+        version: latest
+        actions-cache-folder: 'emsdk-cache'
+    
+    - name: Verify Emscripten Installation
+      run: emcc --version
+    
+    - name: Create Build Directory
+      run: mkdir build
+    
+    - name: Configure CMake
+      run: |
+        cd build
+        emcmake cmake ..
+    
+    - name: Build
+      run: |
+        cd build
+        emmake make
+    
+    - name: Prepare Release Files
+      run: |
+        mkdir release
+        cp build/terminal.wasm release/
+        cp build/terminal.js release/
+        cp index.html release/
+        cp terminal.js release/
+        
+    - name: Create Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: |
+          release/terminal.wasm
+          release/terminal.js
+          release/index.html
+          release/terminal.js
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
